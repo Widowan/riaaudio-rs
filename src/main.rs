@@ -33,6 +33,7 @@ fn main() {
     let auto_update = std::env::var("RIA_AUTO_UPDATE").map(|s| !s.is_empty()).unwrap_or(false);
     let telegram_token = std::env::var("RIA_TELEGRAM_TOKEN").unwrap_or("stub_token".to_string());
     let telegram_chat_id = std::env::var("RIA_TELEGRAM_CHAT_ID").unwrap_or("stub_chat_id".to_string());
+    let sleep_timer = std::env::var("RIA_SLEEP_TIMER").unwrap_or("1800".to_string()).parse::<u64>().expect("sleep timer is NaN");
 
     if cfg!(debug_assertions) {
         clear_start(&download_dir, &seen_file);
@@ -94,7 +95,7 @@ fn main() {
             }
         }
 
-        info!("Sleeping for 30 minutes...");
-        thread::sleep(Duration::from_secs(30 * 60));
+        info!("Sleeping for {} seconds...", sleep_timer);
+        thread::sleep(Duration::from_secs(sleep_timer));
     }
 }
