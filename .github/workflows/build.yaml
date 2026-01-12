@@ -6,6 +6,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    container:
+      image: node:18
     env:
       REPOSITORY_RAW: ${{ github.repository }}
       REGISTRY: ghcr.io
