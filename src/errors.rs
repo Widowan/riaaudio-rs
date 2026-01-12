@@ -12,7 +12,7 @@ pub enum RiaError {
 
     #[error(transparent)]
     YtDlpError(#[from] YtDlpError),
-    
+
     #[error(transparent)]
     FeedError(#[from] FeedError),
 
@@ -63,7 +63,7 @@ pub enum FeedError {
 
     #[error("RSS feed for the channel {0} is empty")]
     EmptyFeed(String),
-    
+
     #[error("Missing field: {0}")]
     MissingField(String)
 }

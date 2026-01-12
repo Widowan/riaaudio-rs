@@ -62,16 +62,19 @@ pub fn save_seen(
     Ok(())
 }
 
-pub fn upload(config: &AppConfig, file_path: &str, title: &str) -> Result<(), RiaError> {
+pub fn upload(config: &AppConfig, file_path: &str, full_song_name: &str) -> Result<(), RiaError> {
     let upload_endpoint = format!("https://api.telegram.org/bot{}/sendAudio", &config.telegram_token);
+    let (performer, title) = full_song_name.split_once(" - ")
+        .expect("Unreachable, title already validated");
 
     let song_file = MultipartPart::file(file_path)?
-        .file_name(format!("{}.mp3", title));
+        .file_name(format!("{}.mp3", full_song_name));
 
     let form = MultipartForm::new()
         .part("audio", song_file)
         .text("chat_id", config.telegram_chat_id.clone())
         .text("title", title.to_string())
+        .text("performer", performer.to_string())
         .text("disable_notification", "true");
 
     debug!("Built multipart form for upload");
@@ -121,7 +124,6 @@ pub fn manage_yt_dlp(operation: PipxOperation) -> Result<(), PipxError> {
 
     debug!("pipx operation finished:\n====STDOUT====\n{}\n====STDERR====\n{}",
         String::from_utf8_lossy(&result.stdout), String::from_utf8_lossy(&result.stderr));
-
 
     if !result.status.success() {
         return Err(PipxError::StatusError(result.into()))
