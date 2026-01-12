@@ -11,11 +11,12 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         ffmpeg \
         python3 \
-        python3-pip \
+        pipx \
         ca-certificates \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
+ENV PATH="/root/.local/bin:${PATH}"
 ENV RIA_AUTO_UPDATE=1
 COPY --from=builder /app/target/release/riaaudio-rs /usr/bin/riaaudio-rs
 CMD ["/usr/bin/riaaudio-rs"]

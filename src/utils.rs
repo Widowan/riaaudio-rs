@@ -7,6 +7,7 @@ use std::collections::HashSet;
 use std::fs;
 use std::fs::{File, OpenOptions};
 use std::io::Write;
+use std::process::Command;
 use log::debug;
 
 pub fn load_config(app_config: &AppConfig) -> Result<ParserConfig, RiaError> {
@@ -103,6 +104,39 @@ pub fn upload(config: &AppConfig, file_path: &str, title: &str) -> Result<(), Ri
             RiaError::TelegramError(json["description"].as_str()
                 .unwrap_or("No description field in json response")
                 .to_string()))
+    }
+
+    Ok(())
+}
+
+#[derive(Debug)]
+pub enum PipxOperation {
+    Install,
+    Upgrade,
+}
+
+impl AsRef<str> for PipxOperation {
+    fn as_ref(&self) -> &str {
+       match self {
+           PipxOperation::Install => "install",
+           PipxOperation::Upgrade => "upgrade"
+       }
+    }
+}
+
+pub fn manage_yt_dlp(operation: PipxOperation) -> Result<(), RiaError> {
+    let result = Command::new("yt-dlp")
+        .args([operation.as_ref(), "yt-dlp"])
+        .output()
+        .map_err(|e| RiaError::PipxCallError(e))?;
+
+    debug!("pipx operation finished:\n====STDOUT====\n{}\n====STDERR====\n{}",
+        String::from_utf8_lossy(&result.stdout), String::from_utf8_lossy(&result.stderr));
+
+
+    if !result.status.success() {
+        let stderr = String::from_utf8_lossy(&result.stderr);
+        return Err(RiaError::PipxStatusError(stderr.into_owned()));
     }
 
     Ok(())

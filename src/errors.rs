@@ -28,4 +28,8 @@ pub enum RiaError {
     YtDlpCallError(std::io::Error),
     #[error("Telegram sending error")]
     TelegramError(String),
+    #[error("pipx call error")]
+    PipxCallError(std::io::Error),
+    #[error("pipx failed")]
+    PipxStatusError(String),
 }

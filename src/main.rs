@@ -9,6 +9,7 @@ use std::time::Duration;
 use log::{debug, error, info};
 use utils::AppConfig;
 use crate::errors::RiaError;
+use crate::utils::{manage_yt_dlp, PipxOperation};
 
 fn clear_start(download_dir: &String, seen_file: &String) {
     fs::remove_dir_all(download_dir).ok();
@@ -58,6 +59,12 @@ fn main() {
 
     let mut seen = utils::load_seen(&app_config);
 
+    if app_config.auto_update {
+        if let Err(e) = utils::manage_yt_dlp(PipxOperation::Install) {
+            error!("Failed to install yt-dlp: {}", e);
+        }
+    }
+
     debug!("Loaded {} channels", parser_config.channels.len());
 
     loop {
@@ -82,7 +89,9 @@ fn main() {
 
         if !downloaded_any && !all_seen && app_config.auto_update {
             error!("yt-dlp failed to download all videos, will try to update it just in case");
-            error!("unimplemented");
+            if let Err(e) = manage_yt_dlp(PipxOperation::Upgrade) {
+                error!("Failed to upgrade yt-dlp: {}", e);
+            }
         }
 
         info!("Sleeping for 30 minutes...");
