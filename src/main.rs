@@ -2,14 +2,16 @@ mod errors;
 mod feed;
 mod utils;
 mod youtube;
+mod structs;
 
 use std::fs::{self};
 use std::{process, thread};
 use std::time::Duration;
 use log::{debug, error, info};
-use utils::AppConfig;
-use crate::errors::RiaError;
-use crate::utils::{manage_yt_dlp, PipxOperation};
+use structs::PipxOperation;
+use structs::AppConfig;
+use crate::errors::{RiaError, VideoError};
+use crate::utils::manage_yt_dlp;
 
 fn clear_start(download_dir: &String, seen_file: &String) {
     fs::remove_dir_all(download_dir).ok();
@@ -58,7 +60,7 @@ fn main() {
         }
     };
 
-    let mut seen = utils::load_seen(&app_config);
+    let (mut seen_ids, mut seen_titles) = utils::load_seen(&app_config);
 
     if app_config.auto_update {
         if let Err(e) = manage_yt_dlp(PipxOperation::Install) {
@@ -69,29 +71,30 @@ fn main() {
     debug!("Loaded {} channels", parser_config.channels.len());
 
     loop {
-        let mut downloaded_any = false;
-        let mut all_seen = true;
+        let mut pipx_error = false;
 
         for channel_id in &parser_config.channels {
-            match youtube::process_channel(&app_config, channel_id, &mut seen) {
+            match youtube::process_channel(&app_config, channel_id, &mut seen_ids, &mut seen_titles) {
                 Ok(_) => {
-                    downloaded_any = true;
-                    all_seen = false;
+                    ()
                 }
-                Err(RiaError::DuplicateVideo) => {
-                    info!("Skipping duplicate video")
+                Err(RiaError::VideoError(VideoError::SeenVideo(v))) => {
+                    info!("Skipped duplicate video: {}", v);
                 }
-                Err(RiaError::TitleCheckFailed(s)) => {
-                    info!("Skipping song with failed title check: {}", s)
+                Err(RiaError::VideoError(VideoError::TitleValidationFailed(v))) => {
+                    info!("Skipped video with failed title check: {}", v);
+                }
+                Err(RiaError::PipxError(e)) => {
+                    error!("{}", e);
+                    pipx_error = true;
                 }
                 Err(e) => {
-                    error!("{:?}: {}", e, e);
-                    all_seen = false;
+                    error!("{}", e);
                 }
             }
         }
 
-        if !downloaded_any && !all_seen && app_config.auto_update {
+        if pipx_error && app_config.auto_update {
             error!("yt-dlp failed to download all videos, will try to update it just in case");
             if let Err(e) = manage_yt_dlp(PipxOperation::Upgrade) {
                 error!("Failed to upgrade yt-dlp: {}", e);

@@ -3,14 +3,12 @@ use std::fs;
 use std::process::Command;
 use log::{debug, info};
 use regex::{Regex, RegexBuilder};
-use crate::errors::RiaError;
-use crate::errors::RiaError::TitleCheckFailed;
+use crate::errors::{RiaError, VideoError, YtDlpError};
 use crate::utils;
 use crate::feed;
-use crate::feed::VideoInfo;
-use crate::utils::AppConfig;
+use crate::structs::{AppConfig, VideoInfo};
 
-fn download_audio(download_dir: &str, video_info: &VideoInfo) -> Result<String, RiaError> {
+fn download(download_dir: &str, video_info: &VideoInfo) -> Result<String, YtDlpError> {
     let output_template = format!("{}/{}.mp3", download_dir, video_info.id);
 
     info!("Downloading audio: {} ({})", video_info.title, video_info.id);
@@ -23,24 +21,18 @@ fn download_audio(download_dir: &str, video_info: &VideoInfo) -> Result<String, 
             "-o", &output_template,
             &video_info.url,
         ])
-        .output()
-        .map_err(|e| RiaError::YtDlpCallError(e))?;
-
-    debug!("yt-dlp finished:\n====STDOUT====\n{}\n====STDERR====\n{}",
-        String::from_utf8_lossy(&result.stdout),
-        String::from_utf8_lossy(&result.stderr));
+        .output()?;
 
     if !result.status.success() {
-        let stderr = String::from_utf8_lossy(&result.stderr);
-        return Err(RiaError::YtDlpStatusError(stderr.into_owned()));
+        return Err(YtDlpError::StatusError(result.into()));
     }
 
     let file_path = format!("{}/{}.mp3", download_dir, video_info.id);
     Ok(file_path)
 }
 
-fn validate_title(title: &str) -> Result<String, RiaError> {
-    let mut title = title.to_string();
+fn validate_title(video_info: &VideoInfo) -> Result<String, VideoError> {
+    let mut title = video_info.title.clone();
 
     let correct_title = Regex::new(r".* - .*").unwrap();
     let banned_regexes = [
@@ -90,14 +82,14 @@ fn validate_title(title: &str) -> Result<String, RiaError> {
     debug!("Validating title: {}", title);
 
     if !correct_title.is_match(&title) {
-        return Err(TitleCheckFailed(correct_title.as_str().to_string()));
+        return Err(VideoError::TitleValidationFailed(video_info.clone()));
     }
 
     debug!("Title template validation passed");
 
     for regex in banned_regexes {
         if regex.is_match(&title) {
-            return Err(TitleCheckFailed(regex.as_str().to_string()));
+            return Err(VideoError::TitleValidationFailed(video_info.clone()));
         }
     }
 
@@ -114,28 +106,43 @@ fn validate_title(title: &str) -> Result<String, RiaError> {
     }
 
     if !replaced {
-        debug!("No replacements were made");
+        debug!("Title was not modified");
     }
 
     Ok(title.to_string())
 }
 
-pub fn process_channel(app_config: &AppConfig, channel_id: &str, seen: &mut HashSet<String>) -> Result<(), RiaError> {
+pub fn process_channel(
+    app_config: &AppConfig,
+    channel_id: &str,
+    seen_ids: &mut HashSet<String>,
+    seen_titles: &mut HashSet<String>
+) -> Result<(), RiaError> {
     let video_info = feed::get_latest_video_info(channel_id)?;
 
-    if seen.contains(&video_info.id) {
-        return Err(RiaError::DuplicateVideo);
-    }
-
-    let correct_title = validate_title(&video_info.title)?;
-
     if video_info.url.contains("/shorts/") {
-        return Err(RiaError::IsShort(video_info.title))
+        return Err(VideoError::IsShort(video_info))?
     }
 
-    let file_path = download_audio(&app_config.download_dir, &video_info)?;
+    if seen_ids.contains(&video_info.id) {
+        return Err(VideoError::SeenVideo(video_info))?
+    }
 
-    if let Err(e) = utils::upload(&app_config, &file_path, &correct_title) {
+    let validated_title = validate_title(&video_info)?;
+
+    let video_info = VideoInfo {
+        title: validated_title,
+        id: video_info.id.clone(),
+        url: video_info.url
+    };
+
+    if seen_titles.contains(&video_info.title) {
+        return Err(VideoError::SeenVideo(video_info))?
+    }
+
+    let file_path = download(&app_config.download_dir, &video_info)?;
+
+    if let Err(e) = utils::upload(&app_config, &file_path, &video_info.title) {
         fs::remove_file(&file_path)?;
         return Err(e)
     }
@@ -144,8 +151,9 @@ pub fn process_channel(app_config: &AppConfig, channel_id: &str, seen: &mut Hash
     fs::remove_file(&file_path)?;
     debug!("File {} removed", file_path);
 
-    utils::save_seen(&app_config, seen, &video_info.id)?;
+    utils::save_seen(&app_config, seen_ids, seen_titles, &video_info)?;
     debug!("ID {} Saved", video_info.id);
 
     Ok(())
 }
+

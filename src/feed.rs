@@ -1,29 +1,24 @@
-use feed_rs::model::{Feed, Link};
-use url::Url;
+use crate::errors::FeedError;
+use crate::structs::VideoInfo;
+use feed_rs::model::Feed;
+use feed_rs::model::Link;
 use feed_rs::parser::parse;
-use log::{info, warn};
-use crate::errors::RiaError;
+use log::info;
+use url::Url;
 
-pub struct VideoInfo {
-    pub title: String,
-    pub id: String,
-    pub url: String,
-}
-
-fn fetch_feed(channel_id: &str) -> Result<Feed, RiaError> {
+fn fetch_feed(channel_id: &str) -> Result<Feed, FeedError> {
     let rss_url = format!("https://www.youtube.com/feeds/videos.xml?channel_id={}", channel_id);
     let response = reqwest::blocking::get(&rss_url)?;
     if !response.status().is_success() {
-        return Err(RiaError::HttpResponseCodeError(
-            format!("HTTP code {} for channel {}", response.status(), channel_id)
-        ));
+        return Err(FeedError::ResponseError(
+            format!("response {} for channel {}", response.status().as_u16(), channel_id)))
     }
     let body = response.bytes()?;
     let feed = parse(body.as_ref())?;
     Ok(feed)
 }
 
-fn extract_video_id(entry: feed_rs::model::Entry) -> Result<(String, String), RiaError> {
+fn extract_video_id(entry: feed_rs::model::Entry) -> Result<(String, String), FeedError> {
     if let Some(alt_link) = entry.links.into_iter().find(|l: &Link| l.rel.as_deref() == Some("alternate")) {
         let href = alt_link.href;
 
@@ -37,36 +32,33 @@ fn extract_video_id(entry: feed_rs::model::Entry) -> Result<(String, String), Ri
         }
     }
 
-    Err(RiaError::VideoIdNotFound)
+    Err(FeedError::VideoIdNotFound)
 }
 
-pub fn get_latest_video_info(channel_id: &str) -> Result<VideoInfo, RiaError> {
+pub fn get_latest_video_info(channel_id: &str) -> Result<VideoInfo, FeedError> {
     let feed = fetch_feed(channel_id)?;
 
-    // TODO: ??
     let channel_name = feed.title
         .as_ref()
         .and_then(|t| Some(t.content.to_string()))
-        .unwrap_or("Unknown channel".to_string());
+        .ok_or(FeedError::MissingField("channel name".to_string()))?;
 
     info!("Checking channel feed: {} ({})", channel_name, channel_id);
 
     let entries = feed.entries;
     if entries.is_empty() {
-        warn!("No videos found in feed for channel {}", channel_id);
-        return Err(RiaError::EmptyFeed);
+        return Err(FeedError::EmptyFeed(channel_id.to_string()))
     }
 
     let latest_entry = &entries[0];
 
-    // TODO: ??
     let title = latest_entry.title
         .as_ref()
         .and_then(|t| Some(t.content.to_string()))
-        .unwrap_or("Unknown title".to_string());
+        .ok_or(FeedError::MissingField("video title".to_string()))?;
 
     let (video_url, video_id) = extract_video_id(latest_entry.clone())?;
-    info!("New video: {} (ID: {})", title, video_id);
+    info!("Newest video: {} (ID: {})", title, video_id);
 
     Ok(VideoInfo { title, id: video_id, url: video_url })
 }

@@ -1,58 +1,65 @@
+use crate::errors::PipxError;
 use crate::errors::RiaError;
+use crate::errors::TelegramError;
+use crate::structs::AppConfig;
+use crate::structs::ParserConfig;
+use crate::structs::PipxOperation;
+use crate::structs::VideoInfo;
+use log::debug;
 use reqwest::blocking::multipart::Form as MultipartForm;
 use reqwest::blocking::multipart::Part as MultipartPart;
-use serde::Deserialize;
 use serde_json::Value;
 use std::collections::HashSet;
 use std::fs;
 use std::fs::{File, OpenOptions};
 use std::io::Write;
 use std::process::Command;
-use log::debug;
 
 pub fn load_config(app_config: &AppConfig) -> Result<ParserConfig, RiaError> {
     let config_file = File::open(&app_config.config_file)?;
     Ok(serde_yaml::from_reader(config_file)?)
 }
 
-pub fn load_seen(app_config: &AppConfig) -> HashSet<String> {
-    let mut seen = HashSet::new();
+pub fn load_seen(app_config: &AppConfig) -> (HashSet<String>, HashSet<String>) {
+    let mut seen_ids = HashSet::new();
+    let mut seen_titles = HashSet::new();
+
     if let Ok(content) = fs::read_to_string(&app_config.seen_file) {
         for line in content.lines() {
-            let trimmed = line.trim();
-            if !trimmed.is_empty() {
-                seen.insert(trimmed.to_string());
+            let trimmed_line = line.trim();
+            if !trimmed_line.is_empty() {
+                let (id, title) = trimmed_line.split_once("|").expect("Corrupted seen log file");
+                seen_ids.insert(id.to_string());
+                seen_titles.insert(title.to_string());
             }
         }
     }
-    seen
+
+    (seen_ids, seen_titles)
 }
 
-pub fn save_seen(app_config: &AppConfig, seen: &mut HashSet<String>, video_id: &str) -> Result<(), RiaError> {
-    seen.insert(video_id.to_string());
+pub fn save_seen(
+        app_config: &AppConfig,
+        seen_ids: &mut HashSet<String>,
+        seen_titles: &mut HashSet<String>,
+        video_info: &VideoInfo
+) -> Result<(), RiaError> {
 
     let mut file = OpenOptions::new()
         .write(true)
         .append(true)
         .create(true)
         .open(&app_config.seen_file)?;
-    writeln!(file, "{}", video_id)?;
+
+    // Not returning immediately because it's not fatal and we need to save it to memory first
+    let write_result = writeln!(file, "{}|{}", video_info.id, video_info.title);
+
+    seen_ids.insert(video_info.id.clone());
+    seen_titles.insert(video_info.title.clone());
+
+    write_result?;
+
     Ok(())
-}
-
-#[derive(Debug, Deserialize)]
-pub struct ParserConfig {
-    pub channels: Vec<String>,
-}
-
-#[derive(Debug)]
-pub struct AppConfig {
-    pub download_dir: String,
-    pub config_file: String,
-    pub seen_file: String,
-    pub auto_update: bool,
-    pub telegram_token: String,
-    pub telegram_chat_id: String,
 }
 
 pub fn upload(config: &AppConfig, file_path: &str, title: &str) -> Result<(), RiaError> {
@@ -89,54 +96,35 @@ pub fn upload(config: &AppConfig, file_path: &str, title: &str) -> Result<(), Ri
                 url.set_path(private_url.as_str())
             }
 
-            return Err(RiaError::from(e))
+            return Err(TelegramError::from(e))?
         }
     };
 
     debug!("Sent the request");
 
-    let json: Value = resp.json()?;
+    let json: Value = resp.json()
+        .map_err(|_| TelegramError::ResponseError("Response json parsing error".to_string()))?;
 
     debug!("Parsed response: {:?}", json);
 
-    if json["ok"].as_bool() != Some(true) {
-        return Err(
-            RiaError::TelegramError(json["description"].as_str()
-                .unwrap_or("No description field in json response")
-                .to_string()))
+    if Some(Some(true)) != json.get("ok").map(|v| v.as_bool()) {
+        return Err(TelegramError::ResponseError(json.to_string()))?
     }
 
     Ok(())
 }
 
-#[derive(Debug)]
-pub enum PipxOperation {
-    Install,
-    Upgrade,
-}
-
-impl AsRef<str> for PipxOperation {
-    fn as_ref(&self) -> &str {
-       match self {
-           PipxOperation::Install => "install",
-           PipxOperation::Upgrade => "upgrade"
-       }
-    }
-}
-
-pub fn manage_yt_dlp(operation: PipxOperation) -> Result<(), RiaError> {
+pub fn manage_yt_dlp(operation: PipxOperation) -> Result<(), PipxError> {
     let result = Command::new("pipx")
         .args([operation.as_ref(), "yt-dlp"])
-        .output()
-        .map_err(|e| RiaError::PipxCallError(e))?;
+        .output()?;
 
     debug!("pipx operation finished:\n====STDOUT====\n{}\n====STDERR====\n{}",
         String::from_utf8_lossy(&result.stdout), String::from_utf8_lossy(&result.stderr));
 
 
     if !result.status.success() {
-        let stderr = String::from_utf8_lossy(&result.stderr);
-        return Err(RiaError::PipxStatusError(stderr.into_owned()));
+        return Err(PipxError::StatusError(result.into()))
     }
 
     Ok(())
