@@ -5,7 +5,7 @@ on:
       - main
 jobs:
   build:
-    runs-on: dedicated-runner
+    runs-on: ubuntu-latest
     env:
       REPOSITORY_RAW: ${{ github.repository }}
       REGISTRY: ghcr.io
