@@ -1,0 +1,7 @@
+/target
+config.yml
+config.yaml
+downloads
+workdir
+.idea
+seen_videos.txt
