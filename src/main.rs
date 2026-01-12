@@ -60,7 +60,7 @@ fn main() {
     let mut seen = utils::load_seen(&app_config);
 
     if app_config.auto_update {
-        if let Err(e) = utils::manage_yt_dlp(PipxOperation::Install) {
+        if let Err(e) = manage_yt_dlp(PipxOperation::Install) {
             error!("Failed to install yt-dlp: {}", e);
         }
     }

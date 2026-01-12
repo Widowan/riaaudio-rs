@@ -125,7 +125,7 @@ impl AsRef<str> for PipxOperation {
 }
 
 pub fn manage_yt_dlp(operation: PipxOperation) -> Result<(), RiaError> {
-    let result = Command::new("yt-dlp")
+    let result = Command::new("pipx")
         .args([operation.as_ref(), "yt-dlp"])
         .output()
         .map_err(|e| RiaError::PipxCallError(e))?;
