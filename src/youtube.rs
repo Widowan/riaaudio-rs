@@ -1,4 +1,5 @@
 use std::collections::HashSet;
+use std::fs;
 use std::process::Command;
 use log::{debug, info};
 use regex::{Regex, RegexBuilder};
@@ -125,7 +126,7 @@ pub fn process_channel(app_config: &AppConfig, channel_id: &str, seen: &mut Hash
         return Err(RiaError::DuplicateVideo);
     }
 
-    validate_title(&video_info.title)?;
+    let correct_title = validate_title(&video_info.title)?;
 
     if video_info.url.contains("/shorts/") {
         return Err(RiaError::IsShort(video_info.title))
@@ -133,8 +134,13 @@ pub fn process_channel(app_config: &AppConfig, channel_id: &str, seen: &mut Hash
 
     let file_path = download_audio(&app_config.download_dir, &video_info)?;
 
-    utils::upload(&file_path);
+    utils::upload(&app_config, &file_path, &correct_title)?;
+    info!("Upload successful");
+    fs::remove_file(&file_path)?;
+    debug!("File {} removed", file_path);
+
     utils::save_seen(&app_config, seen, &video_info.id)?;
+    debug!("ID {} Saved", video_info.id);
 
     Ok(())
 }

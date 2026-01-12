@@ -30,12 +30,21 @@ fn main() {
     let config_file = std::env::var("RIA_CONFIG").unwrap_or("config.yaml".to_string());
     let seen_file = std::env::var("RIA_SEEN_FILE").unwrap_or("seen_videos.txt".to_string());
     let auto_update = std::env::var("RIA_AUTO_UPDATE").map(|s| !s.is_empty()).unwrap_or(false);
+    let telegram_token = std::env::var("RIA_TELEGRAM_TOKEN").unwrap_or("stub_token".to_string());
+    let telegram_chat_id = std::env::var("RIA_TELEGRAM_CHAT_ID").unwrap_or("stub_chat_id".to_string());
 
     if cfg!(debug_assertions) {
         clear_start(&download_dir, &seen_file);
     }
 
-    let app_config = AppConfig { download_dir, config_file, seen_file, auto_update };
+    let app_config = AppConfig {
+        download_dir,
+        config_file,
+        seen_file,
+        auto_update,
+        telegram_token,
+        telegram_chat_id
+    };
 
     fs::create_dir_all(&app_config.download_dir).expect("Failed to create downloads directory");
 

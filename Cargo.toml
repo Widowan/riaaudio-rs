@@ -6,7 +6,7 @@ edition = "2024"
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }
 serde_yaml = "0.9"
-reqwest = { version = "0.13.1", features = ["blocking"] }
+reqwest = { version = "0.13.1", features = ["blocking", "multipart", "json"] }
 url = "2.5.8"
 feed-rs = "2.3.1"
 thiserror = "2.0.17"
@@ -14,3 +14,4 @@ log = "0.4.29"
 env_logger = "0.11.8"
 ctrlc = "3.5.1"
 regex = "1.12.2"
+serde_json = "1.0.149"

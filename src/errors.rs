@@ -26,4 +26,6 @@ pub enum RiaError {
     YtDlpStatusError(String),
     #[error("Failed to call yt-dlp")]
     YtDlpCallError(std::io::Error),
+    #[error("Telegram sending error")]
+    TelegramError(String),
 }
