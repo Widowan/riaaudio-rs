@@ -6,6 +6,8 @@ on:
 jobs:
   build:
     runs-on: dedicated-runner
+    env:
+      REPOSITORY_RAW: ${{ gitea.repository }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -21,6 +23,9 @@ jobs:
           registry: ${{ vars.REGISTRY_URL }}
           username: ${{ secrets.REGISTRY_USERNAME }}
           password: ${{ secrets.REGISTRY_TOKEN }}
+      - name: Normalize variables
+        run: |
+          echo "REPOSITORY=${REPOSITORY_RAW,,}" >> "${GITHUB_ENV}"
       - name: Build and push image
         uses: docker/build-push-action@v5
         with:
@@ -28,5 +33,5 @@ jobs:
           file: ./Dockerfile
           push: true
           tags: "\
-            ${{ vars.REGISTRY_URL }}/${{ gitea.repository }}:latest,\
-            ${{ vars.REGISTRY_URL }}/${{ gitea.repository }}:b${{ gitea.run_id }}"
+            ${{ vars.REGISTRY_URL }}/${REPOSITORY}:latest,\
+            ${{ vars.REGISTRY_URL }}/${REPOSITORY}:b${{ gitea.run_id }}"
