@@ -78,8 +78,8 @@ fn main() {
                     downloaded_any = true;
                     all_seen = false;
                 },
-                Err(RiaError::YtDlpCallError(e)) => {
-                    error!("Failed to call yt-dlp: {}", e);
+                Err(RiaError::DuplicateVideo) => {
+                    info!("Skipping duplicate video")
                 }
                 Err(e) => {
                     error!("{:?}: {}", e, e);
