@@ -8,6 +8,7 @@ jobs:
     runs-on: dedicated-runner
     env:
       REPOSITORY_RAW: ${{ gitea.repository }}
+      REGISTRY: ghcr.io
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -16,9 +17,9 @@ jobs:
       - name: Login to registry
         uses: docker/login-action@v3
         with:
-          registry: ${{ vars.REGISTRY_URL }}
-          username: ${{ secrets.REGISTRY_USERNAME }}
-          password: ${{ secrets.REGISTRY_TOKEN }}
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
       - name: Normalize variables
         run: |
           echo "REPOSITORY=${REPOSITORY_RAW,,}" >> "${GITHUB_ENV}"
@@ -30,4 +31,4 @@ jobs:
           push: true
           tags: "\
             ${{ vars.REGISTRY_URL }}/${{ env.REPOSITORY }}:latest,\
-            ${{ vars.REGISTRY_URL }}/${{ env.REPOSITORY }}:b${{ gitea.run_id }}"
+            ${{ vars.REGISTRY_URL }}/${{ env.REPOSITORY }}:b${{ guthub.run_id }}"

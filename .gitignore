@@ -5,3 +5,4 @@ downloads
 workdir
 .idea
 seen_videos.txt
+docker-compose.yml
