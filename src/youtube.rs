@@ -134,7 +134,11 @@ pub fn process_channel(app_config: &AppConfig, channel_id: &str, seen: &mut Hash
 
     let file_path = download_audio(&app_config.download_dir, &video_info)?;
 
-    utils::upload(&app_config, &file_path, &correct_title)?;
+    if let Err(e) = utils::upload(&app_config, &file_path, &correct_title) {
+        fs::remove_file(&file_path)?;
+        return Err(e)
+    }
+
     info!("Upload successful");
     fs::remove_file(&file_path)?;
     debug!("File {} removed", file_path);
