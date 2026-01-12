@@ -8,6 +8,7 @@ jobs:
     runs-on: dedicated-runner
     env:
       REPOSITORY_RAW: ${{ gitea.repository }}
+      REGISTRY: ${{ vars.REGISTRY_URL }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
