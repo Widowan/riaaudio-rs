@@ -33,5 +33,5 @@ jobs:
           file: ./Dockerfile
           push: true
           tags: "\
-            ${{ vars.REGISTRY_URL }}/${REPOSITORY}:latest,\
-            ${{ vars.REGISTRY_URL }}/${REPOSITORY}:b${{ gitea.run_id }}"
+            ${{ vars.REGISTRY_URL }}/${{ env.REPOSITORY }}:latest,\
+            ${{ vars.REGISTRY_URL }}/${{ env.REPOSITORY }}:b${{ gitea.run_id }}"
