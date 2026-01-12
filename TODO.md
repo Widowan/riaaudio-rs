@@ -1,0 +1,3 @@
+- [ ] Refactor regex checking (cache + M+N avg instead of M*N)
+- [ ] Data dir instead of ./config.yml and seen_videos.txt individually
+- [ ] Split errors into logical groups

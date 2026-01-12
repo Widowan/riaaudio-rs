@@ -77,9 +77,12 @@ fn main() {
                 Ok(_) => {
                     downloaded_any = true;
                     all_seen = false;
-                },
+                }
                 Err(RiaError::DuplicateVideo) => {
                     info!("Skipping duplicate video")
+                }
+                Err(RiaError::TitleCheckFailed(s)) => {
+                    info!("Skipping song with failed title check: {}", s)
                 }
                 Err(e) => {
                     error!("{:?}: {}", e, e);

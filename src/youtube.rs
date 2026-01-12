@@ -45,7 +45,7 @@ fn validate_title(title: &str) -> Result<String, RiaError> {
     let correct_title = Regex::new(r".* - .*").unwrap();
     let banned_regexes = [
         r"Best of",
-        r"Best songs",
+        r"Best song",
         r" Mix",
         r"Recap",
         r"Album",
@@ -75,6 +75,7 @@ fn validate_title(title: &str) -> Result<String, RiaError> {
         r"Release",
         r"Video",
         r"Monstercat",
+        r"Music"
     ].iter()
         .map(|re| {
             // There probably exists better solution than generating M*N regexes, but I can't be bothered
