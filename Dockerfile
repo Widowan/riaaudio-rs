@@ -18,6 +18,7 @@ RUN apt-get update \
 
 ENV PATH="/root/.local/bin:${PATH}"
 ENV RIA_AUTO_UPDATE=1
+ENV RIA_DOWNLOAD_DIR=/tmp
 WORKDIR /data
 COPY --from=builder /app/target/release/riaaudio-rs /usr/bin/riaaudio-rs
 CMD ["/usr/bin/riaaudio-rs"]
