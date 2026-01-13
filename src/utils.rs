@@ -28,6 +28,7 @@ pub fn load_seen(app_config: &AppConfig) -> (HashSet<String>, HashSet<String>) {
     OpenOptions::new()
         .write(true)
         .create(true)
+        .truncate(false)
         .open(&app_config.seen_file)
         .expect("Can't open seen log file")
         .read_to_string(&mut content)
@@ -54,7 +55,6 @@ pub fn save_seen(
 ) -> Result<(), RiaError> {
 
     let mut file = OpenOptions::new()
-        .write(true)
         .append(true)
         .create(true)
         .open(&app_config.seen_file)?;

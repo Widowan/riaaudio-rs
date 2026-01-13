@@ -40,7 +40,7 @@ pub fn get_latest_video_info(channel_id: &str) -> Result<VideoInfo, FeedError> {
 
     let channel_name = feed.title
         .as_ref()
-        .and_then(|t| Some(t.content.to_string()))
+        .map(|t| t.content.to_string())
         .ok_or(FeedError::MissingField("channel name".to_string()))?;
 
     info!("Checking channel feed: {} ({})", channel_name, channel_id);
@@ -54,7 +54,7 @@ pub fn get_latest_video_info(channel_id: &str) -> Result<VideoInfo, FeedError> {
 
     let title = latest_entry.title
         .as_ref()
-        .and_then(|t| Some(t.content.to_string()))
+        .map(|t| t.content.to_string())
         .ok_or(FeedError::MissingField("video title".to_string()))?;
 
     let (video_url, video_id) = extract_video_id(latest_entry.clone())?;

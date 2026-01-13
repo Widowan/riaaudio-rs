@@ -65,6 +65,7 @@ fn main() {
 
     let (mut seen_ids, mut seen_titles) = utils::load_seen(&app_config);
 
+    #[allow(clippy::collapsible_if)]
     if app_config.auto_update {
         if let Err(e) = manage_yt_dlp(PipxOperation::Install) {
             error!("Failed to install yt-dlp: {}", e);
@@ -78,16 +79,14 @@ fn main() {
 
         for channel_id in &parser_config.channels {
             match youtube::process_channel(&app_config, channel_id, &mut seen_ids, &mut seen_titles) {
-                Ok(_) => {
-                    ()
-                }
-                Err(RiaError::VideoError(VideoError::SeenVideo(v))) => {
+                Ok(_) => { }
+                Err(RiaError::Video(VideoError::SeenVideo(v))) => {
                     info!("Skipped duplicate video: {}", v);
                 }
-                Err(RiaError::VideoError(VideoError::TitleValidationFailed(v))) => {
+                Err(RiaError::Video(VideoError::TitleValidationFailed(v))) => {
                     info!("Skipped video with failed title check: {}", v);
                 }
-                Err(RiaError::PipxError(e)) => {
+                Err(RiaError::Pipx(e)) => {
                     error!("{}", e);
                     pipx_error = true;
                 }

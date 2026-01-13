@@ -3,6 +3,9 @@ name = "riaaudio-rs"
 version = "0.1.0"
 edition = "2024"
 
+[lints.clippy]
+collapsible_if = "allow"
+
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }
 serde_yaml = "0.9"

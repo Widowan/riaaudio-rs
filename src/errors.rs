@@ -1,26 +1,25 @@
 use crate::structs::{ProcessOutput, VideoInfo};
-use log::error;
 use thiserror::Error as ThisError;
 
 #[derive(ThisError, Debug)]
 pub enum RiaError {
     #[error(transparent)]
-    VideoError(#[from] VideoError),
+    Video(#[from] VideoError),
 
     #[error(transparent)]
-    PipxError(#[from] PipxError),
+    Pipx(#[from] PipxError),
 
     #[error(transparent)]
-    YtDlpError(#[from] YtDlpError),
+    YtDlp(#[from] YtDlpError),
 
     #[error(transparent)]
-    FeedError(#[from] FeedError),
+    Feed(#[from] FeedError),
 
     #[error(transparent)]
-    TelegramError(#[from] TelegramError),
+    Telegram(#[from] TelegramError),
 
     #[error("Failed to parse config: {0}")]
-    ConfigParseError(#[from] serde_yaml::Error),
+    ConfigParse(#[from] serde_yaml::Error),
 
     #[error("IO Error: {0}")]
     IoError(#[from] std::io::Error),

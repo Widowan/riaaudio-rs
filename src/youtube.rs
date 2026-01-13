@@ -64,7 +64,7 @@ fn validate_title(video_info: &VideoInfo, regexes: &Regexes) -> Result<String, V
                 }
             }
 
-            return cap.to_string()
+            cap.to_string()
         }).into_owned();
     }
 
@@ -106,7 +106,7 @@ pub fn process_channel(
 
     let file_path = download(&app_config.download_dir, &video_info)?;
 
-    if let Err(e) = utils::upload(&app_config, &file_path, &video_info.title) {
+    if let Err(e) = utils::upload(app_config, &file_path, &video_info.title) {
         fs::remove_file(&file_path)?;
         return Err(e)
     }
@@ -115,7 +115,7 @@ pub fn process_channel(
     fs::remove_file(&file_path)?;
     debug!("File {} removed", file_path);
 
-    utils::save_seen(&app_config, seen_ids, seen_titles, &video_info)?;
+    utils::save_seen(app_config, seen_ids, seen_titles, &video_info)?;
     debug!("ID {} Saved", video_info.id);
 
     Ok(())
