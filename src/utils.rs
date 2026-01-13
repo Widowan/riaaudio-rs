@@ -11,9 +11,8 @@ use reqwest::blocking::multipart::Form as MultipartForm;
 use reqwest::blocking::multipart::Part as MultipartPart;
 use serde_json::Value;
 use std::collections::HashSet;
-use std::fs;
 use std::fs::{File, OpenOptions};
-use std::io::Write;
+use std::io::{Read, Write};
 use std::process::Command;
 
 pub fn load_config(app_config: &AppConfig) -> Result<ParserConfig, RiaError> {
@@ -25,14 +24,22 @@ pub fn load_seen(app_config: &AppConfig) -> (HashSet<String>, HashSet<String>) {
     let mut seen_ids = HashSet::new();
     let mut seen_titles = HashSet::new();
 
-    if let Ok(content) = fs::read_to_string(&app_config.seen_file) {
-        for line in content.lines() {
-            let trimmed_line = line.trim();
-            if !trimmed_line.is_empty() {
-                let (id, title) = trimmed_line.split_once("|").expect("Corrupted seen log file");
-                seen_ids.insert(id.to_string());
-                seen_titles.insert(title.to_string());
-            }
+    let mut content = String::new();
+    OpenOptions::new()
+        .write(true)
+        .create(true)
+        .open(&app_config.seen_file)
+        .expect("Can't open seen log file")
+        .read_to_string(&mut content)
+        .expect("Corrupted seen log file (reading)");
+
+    for line in content.lines() {
+        let trimmed_line = line.trim();
+        if !trimmed_line.is_empty() {
+            let (id, title) = trimmed_line.split_once("|")
+                .expect("Corrupted seen log file (parsing)");
+            seen_ids.insert(id.to_string());
+            seen_titles.insert(title.to_string());
         }
     }
 

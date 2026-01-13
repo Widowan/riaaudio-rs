@@ -14,8 +14,7 @@ A docker container is available in the packages menu:
 touch seen_videos.txt
 
 docker run \
-  -v ./config.yaml:/config.yaml \
-  -v ./seen_videos.txt:/seen_videos.txt \
+  -v ./data:/data \
   -e RIA_TELEGRAM_TOKEN=xxxxx:xxxxx \
   -e RIA_TELEGRAM_CHAT_ID=@RiaAudio \
   -e RIA_SLEEP_TIMER=1800 \
