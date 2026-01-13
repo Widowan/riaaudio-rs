@@ -1,11 +1,12 @@
 use crate::errors::PipxError;
 use crate::errors::RiaError;
 use crate::errors::TelegramError;
-use crate::structs::AppConfig;
 use crate::structs::ParserConfig;
 use crate::structs::PipxOperation;
 use crate::structs::VideoInfo;
+use crate::structs::{AppConfig, Regexes};
 use log::debug;
+use regex::{Regex, RegexBuilder};
 use reqwest::blocking::multipart::Form as MultipartForm;
 use reqwest::blocking::multipart::Part as MultipartPart;
 use serde_json::Value;
@@ -130,4 +131,52 @@ pub fn manage_yt_dlp(operation: PipxOperation) -> Result<(), PipxError> {
     }
 
     Ok(())
+}
+
+pub fn setup_regexes() -> Regexes {
+    let correct_title = Regex::new(r".* - .*").unwrap();
+
+    let banned_regexes = [
+        r"Best of",
+        r"Best song",
+        r" Mix",
+        r"Recap",
+        r"Album",
+    ].map(|r| RegexBuilder::new(r).case_insensitive(true).build().unwrap()).to_vec();
+
+    let bracket_regexes = [
+        r"\(.*?\)",
+        r"\{.*?\}",
+        r"\[.*?\]",
+
+        r"【.*?】",
+        r"﹝.*?﹞",
+        r"❨.*?❩",
+        r"❪.*?❫",
+        r"⟨.*?⟩",
+        r"❮.*?❯",
+        r"❰.*?❱",
+        r"⁅.*?⁆",
+        r"❬.*?❭",
+        r"⦗.*?⦘",
+        r"❲.*?❳"
+    ].map(|r| RegexBuilder::new(r).case_insensitive(true).build().unwrap()).to_vec();
+
+    let removed_regexes = [
+        r"Lyric",
+        r"Official",
+        r"Visualizer",
+        r"Visualiser",
+        r"Release",
+        r"Video",
+        r"Monstercat",
+        r"Music"
+    ].map(|r| RegexBuilder::new(r).case_insensitive(true).build().unwrap()).to_vec();
+
+    Regexes {
+        title_regex: correct_title,
+        bracket_regexes,
+        banned_regexes,
+        removed_regexes,
+    }
 }

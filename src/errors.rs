@@ -22,7 +22,7 @@ pub enum RiaError {
     #[error("Failed to parse config: {0}")]
     ConfigParseError(#[from] serde_yaml::Error),
 
-    #[error(transparent)]
+    #[error("IO Error: {0}")]
     IoError(#[from] std::io::Error),
 }
 
@@ -31,7 +31,7 @@ pub enum TelegramError {
     #[error("Error sending request to telegram: {0:?}")]
     RequestError(#[from] reqwest::Error),
 
-    #[error("Unsuccessful telegram response")]
+    #[error("Unsuccessful telegram response: {0}")]
     ResponseError(String)
 }
 

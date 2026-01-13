@@ -1,5 +1,5 @@
-- [ ] Refactor regex checking (cache + M+N avg instead of M*N)
-  - [ ] Cache built regex list (propagate down from main)
-  - [ ] Find substrings in brackets, then search results for all word occurences for smaller average complexity (instead of always N*M)
+- [x] Refactor regex checking (cache + M+N avg instead of M*N)
+  - [x] Cache built regex list (propagate down from main)
+  - [x] Find substrings in brackets, then search results for all word occurrences for smaller average complexity (instead of always N*M)
 - [ ] Data dir instead of ./config.yml and seen_videos.txt individually
-- [ ] Split errors into logical groups
+- [x] Split errors into logical groups

@@ -1,3 +1,4 @@
+use regex::Regex;
 use serde::Deserialize;
 use std::fmt::Display;
 use std::fmt::Formatter;
@@ -30,6 +31,15 @@ pub struct AppConfig {
     pub auto_update: bool,
     pub telegram_token: String,
     pub telegram_chat_id: String,
+    pub regexes: Regexes,
+}
+
+#[derive(Debug)]
+pub struct Regexes {
+    pub title_regex: Regex,
+    pub bracket_regexes: Vec<Regex>,
+    pub banned_regexes: Vec<Regex>,
+    pub removed_regexes: Vec<Regex>,
 }
 
 #[derive(Debug, Clone)]

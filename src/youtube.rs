@@ -1,12 +1,12 @@
+use crate::errors::{RiaError, VideoError, YtDlpError};
+use crate::feed;
+use crate::structs::{AppConfig, Regexes, VideoInfo};
+use crate::utils;
+use log::debug;
+use log::info;
 use std::collections::HashSet;
 use std::fs;
 use std::process::Command;
-use log::{debug, info};
-use regex::{Regex, RegexBuilder};
-use crate::errors::{RiaError, VideoError, YtDlpError};
-use crate::utils;
-use crate::feed;
-use crate::structs::{AppConfig, VideoInfo};
 
 fn download(download_dir: &str, video_info: &VideoInfo) -> Result<String, YtDlpError> {
     let output_template = format!("{}/{}.mp3", download_dir, video_info.id);
@@ -31,63 +31,19 @@ fn download(download_dir: &str, video_info: &VideoInfo) -> Result<String, YtDlpE
     Ok(file_path)
 }
 
-fn validate_title(video_info: &VideoInfo) -> Result<String, VideoError> {
+fn validate_title(video_info: &VideoInfo, regexes: &Regexes) -> Result<String, VideoError> {
     let mut title = video_info.title.clone();
 
-    let correct_title = Regex::new(r".* - .*").unwrap();
-    let banned_regexes = [
-        r"Best of",
-        r"Best song",
-        r" Mix",
-        r"Recap",
-        r"Album",
-    ].map(|r| RegexBuilder::new(r).case_insensitive(true).build().unwrap());
-    let bracket_pairs = [
-        (r"\(", r"\)"),
-        (r"\{", r"\}"),
-        (r"\[", r"\]"),
-
-        (r"【", r"】"),
-        (r"﹝", r"﹞"),
-        (r"❨", r"❩"),
-        (r"❪", r"❫"),
-        (r"⟨", r"⟩"),
-        (r"❮", r"❯"),
-        (r"❰", r"❱"),
-        (r"⁅", r"⁆"),
-        (r"❬", r"❭"),
-        (r"⦗", r"⦘"),
-        (r"❲", r"❳")
-    ];
-    let removed_regexes = [
-        r"Lyric",
-        r"Official",
-        r"Visualizer",
-        r"Visualiser",
-        r"Release",
-        r"Video",
-        r"Monstercat",
-        r"Music"
-    ].iter()
-        .map(|re| {
-            // There probably exists better solution than generating M*N regexes, but I can't be bothered
-            bracket_pairs.iter()
-                .map(|&(l, r)| format!(" ?{}.*?{}.*?{}", l, re, r))
-                .collect::<Vec<String>>()
-        })
-        .flatten()
-        .map(|re| RegexBuilder::new(&re).case_insensitive(true).build().unwrap())
-        .collect::<Vec<Regex>>();
 
     debug!("Validating title: {}", title);
 
-    if !correct_title.is_match(&title) {
+    if !regexes.title_regex.is_match(&title) {
         return Err(VideoError::TitleValidationFailed(video_info.clone()));
     }
 
     debug!("Title template validation passed");
 
-    for regex in banned_regexes {
+    for regex in regexes.banned_regexes.iter() {
         if regex.is_match(&title) {
             return Err(VideoError::TitleValidationFailed(video_info.clone()));
         }
@@ -96,27 +52,35 @@ fn validate_title(video_info: &VideoInfo) -> Result<String, VideoError> {
     debug!("No banned regexes found");
 
     let mut replaced = false;
-    for regex in removed_regexes {
-        title = regex.replace_all(&title, |caps: &regex::Captures| {
-            replaced = true;
-            let m = caps.get(0).unwrap();
-            debug!("Removed part: {}", m.as_str());
-            return ""
-        }).to_string();
+
+    for bracket_regex in regexes.bracket_regexes.iter() {
+        title = bracket_regex.replace_all(&title, |caps: &regex::Captures| {
+            let cap = caps.get_match().as_str();
+
+            for removed_regex in regexes.removed_regexes.iter() {
+                if removed_regex.is_match(cap) {
+                    replaced = true;
+                    return "".to_string()
+                }
+            }
+
+            return cap.to_string()
+        }).into_owned();
     }
+
 
     if !replaced {
         debug!("Title was not modified");
     }
 
-    Ok(title.to_string())
+    Ok(title)
 }
 
 pub fn process_channel(
     app_config: &AppConfig,
     channel_id: &str,
     seen_ids: &mut HashSet<String>,
-    seen_titles: &mut HashSet<String>
+    seen_titles: &mut HashSet<String>,
 ) -> Result<(), RiaError> {
     let video_info = feed::get_latest_video_info(channel_id)?;
 
@@ -128,7 +92,7 @@ pub fn process_channel(
         return Err(VideoError::SeenVideo(video_info))?
     }
 
-    let validated_title = validate_title(&video_info)?;
+    let validated_title = validate_title(&video_info, &app_config.regexes)?;
 
     let video_info = VideoInfo {
         title: validated_title,

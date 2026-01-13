@@ -37,6 +37,8 @@ fn main() {
     let telegram_chat_id = std::env::var("RIA_TELEGRAM_CHAT_ID").unwrap_or("stub_chat_id".to_string());
     let sleep_timer = std::env::var("RIA_SLEEP_TIMER").unwrap_or("1800".to_string()).parse::<u64>().expect("sleep timer is NaN");
 
+    let regexes = utils::setup_regexes();
+
     if cfg!(debug_assertions) {
         clear_start(&download_dir, &seen_file);
     }
@@ -47,7 +49,8 @@ fn main() {
         seen_file,
         auto_update,
         telegram_token,
-        telegram_chat_id
+        telegram_chat_id,
+        regexes
     };
 
     fs::create_dir_all(&app_config.download_dir).expect("Failed to create downloads directory");
@@ -95,7 +98,7 @@ fn main() {
         }
 
         if pipx_error && app_config.auto_update {
-            error!("yt-dlp failed to download all videos, will try to update it just in case");
+            error!("yt-dlp failed to download videos, will try to update it just in case");
             if let Err(e) = manage_yt_dlp(PipxOperation::Upgrade) {
                 error!("Failed to upgrade yt-dlp: {}", e);
             }
