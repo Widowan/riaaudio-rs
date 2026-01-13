@@ -26,6 +26,7 @@ pub fn load_seen(app_config: &AppConfig) -> (HashSet<String>, HashSet<String>) {
 
     let mut content = String::new();
     OpenOptions::new()
+        .write(true)
         .read(true)
         .create(true)
         .truncate(false)
