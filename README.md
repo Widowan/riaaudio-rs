@@ -2,6 +2,12 @@
 
 A small rust app that utilizes yt-dlp to download music from configured youtube channels and upload the audio to telegram
 
+Included features:
+- Automatic install and update of yt-dlp inside container
+- Persists video IDs and song titles to avoid duplicates
+- Skips videos with blacklisted patterns ("Best of", "Mix", etc)
+- Automatically strips `(Lyrics video)`, `[Monstercat Release]`, `(Official Visualizer)` and the likes from the title ([full list](src/branch/main/src/utils.rs#L147))
+
 ## Can I see it live?
 
 https://t.me/RiaAudio
@@ -11,8 +17,6 @@ https://t.me/RiaAudio
 A docker container is available in the packages menu:
 
 ```shell
-touch seen_videos.txt
-
 docker run \
   -v ./data:/data \
   -e RIA_TELEGRAM_TOKEN=xxxxx:xxxxx \
@@ -31,3 +35,5 @@ channels:
   - 'UC0n9yiP-AD2DpuuYCDwlNxQ' # tasty
   - 'UCBvc2GVFfuY6zxqdjNF-6sQ' # arcadium
 ```
+
+You can build it natively with `cargo build --release`, but it's recommended to run inside container
