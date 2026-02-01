@@ -75,7 +75,7 @@ fn main() {
     debug!("Loaded {} channels", parser_config.channels.len());
 
     loop {
-        let mut pipx_error = false;
+        let mut download_error = false;
 
         for channel_id in &parser_config.channels {
             match youtube::process_channel(&app_config, channel_id, &mut seen_ids, &mut seen_titles) {
@@ -86,9 +86,9 @@ fn main() {
                 Err(RiaError::Video(VideoError::TitleValidationFailed(v))) => {
                     info!("Skipped video with failed title check: {}", v);
                 }
-                Err(RiaError::Pipx(e)) => {
+                Err(RiaError::YtDlp(e)) => {
                     error!("{}", e);
-                    pipx_error = true;
+                    download_error = true;
                 }
                 Err(e) => {
                     error!("{}", e);
@@ -96,8 +96,8 @@ fn main() {
             }
         }
 
-        if pipx_error && app_config.auto_update {
-            error!("yt-dlp failed to download videos, will try to update it just in case");
+        if download_error && app_config.auto_update {
+            error!("yt-dlp failed to download some videos, will try to update it just in case");
             if let Err(e) = manage_yt_dlp(PipxOperation::Upgrade) {
                 error!("Failed to upgrade yt-dlp: {}", e);
             }
